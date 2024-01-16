@@ -6,10 +6,10 @@ set_xmakever("2.6.9")
 add_rules("mode.debug", "mode.release")
 add_requires("gtest", {system = true, optional = true})
 
-target("lib")
+target("libjson")
     set_kind("shared")
-    add_files("$(scriptdir)/src/*.cpp")
-    add_includedirs("$(scriptdir)/include", {public = true})
+    add_files("src/*.cpp")
+    add_includedirs("include", {public = true})
     
 
 target("test_main")
