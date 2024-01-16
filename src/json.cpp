@@ -312,6 +312,16 @@ bool json::empty() const
                       *__value);
 }
 
-int json::size() const
+std::size_t json::size() const
 {
+    return std::visit([](const auto &val) -> std::size_t
+                      {
+        std::size_t temp_size = 0;
+        using T = std::decay_t<decltype(val)>;
+        if constexpr(std::is_same_v<T, std::string> || std::is_same_v<T, std::vector<json>> || std::is_same_v<T, std::unordered_map<std::string, json>>)
+        {
+            temp_size = val.size();
+        }   
+        return temp_size; },
+                      *__value);
 }

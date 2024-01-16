@@ -1,6 +1,6 @@
 set_languages("c99", "c++17")
 set_project("json_parser")
-set_version("1.0.0")
+set_version("0.0.1")
 set_xmakever("2.6.9")
 
 add_rules("mode.debug", "mode.release")
@@ -11,11 +11,10 @@ target("lib")
     add_files("$(scriptdir)/src/*.cpp")
     add_includedirs("$(scriptdir)/include", {public = true})
     
-if has_package("gtest") then
-    target("test_main")
-        set_kind("binary")
-        set_group("tests")
-        add_files("test/main.cpp")
-        add_deps("lib")
-        add_packages("gtest")
-end
+
+target("test_main")
+    set_kind("binary")
+    set_group("tests")
+    add_files("test/main.cpp")
+    add_deps("lib")
+    add_packages("gtest")

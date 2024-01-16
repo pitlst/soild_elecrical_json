@@ -40,9 +40,9 @@ namespace swq
         bool is_type(std::string_view input_type_name) const;
 
         bool has(int index) const;
-        bool has(const std::string & key) const;
+        bool has(const std::string &key) const;
         bool empty() const;
-        int size() const;
+        std::size_t size() const;
 
     private:
         using m_value = std::variant<
