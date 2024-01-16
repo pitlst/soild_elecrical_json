@@ -3,9 +3,6 @@
 # soild_elecrical_json
 
 一个私人定制的json解析库
-
-
-本篇README.md面向开发者
  
 ## 目录
 
@@ -83,4 +80,4 @@ sunmoming@gmail.com
 
 ### 版权说明
 
-该项目签署了MIT 授权许可，详情请参阅 [LICENSE.txt](https://github.com/pitlst/soild_elecrical_json/blob/master/LICENSE.txt)
+该项目签署了MIT 授权许可，详情请参阅 [LICENSE.txt](https://github.com/pitlst/soild_elecrical_json/blob/master/LICENSE)

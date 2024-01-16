@@ -4,17 +4,18 @@ set_version("1.0.0")
 set_xmakever("2.6.9")
 
 add_rules("mode.debug", "mode.release")
-add_requires("gtest", {system = true})
+add_requires("gtest", {system = true, optional = true})
 
 target("lib")
     set_kind("shared")
     add_files("$(scriptdir)/src/*.cpp")
     add_includedirs("$(scriptdir)/include", {public = true})
     
-
-target("test_main")
-    set_kind("binary")
-    set_group("tests")
-    add_files("test/main.cpp")
-    add_deps("lib")
-    add_packages("gtest")
+if has_package("gtest") then
+    target("test_main")
+        set_kind("binary")
+        set_group("tests")
+        add_files("test/main.cpp")
+        add_deps("lib")
+        add_packages("gtest")
+end
