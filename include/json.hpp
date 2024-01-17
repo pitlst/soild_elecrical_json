@@ -21,6 +21,8 @@ namespace swq
         ~json() = default;
 
         json operator=(const json &input_value);
+        json operator[](std::size_t index);
+        json operator[](const std::string &key);
 
         static json array(const std::initializer_list<json> &input_value);
         static json object(const std::unordered_map<std::string, json> &input_value);

@@ -41,6 +41,36 @@ json json::operator=(const json &input_value)
     this->__value = input_value.__value;
     return *this;
 }
+json json::operator[](std::size_t index)
+{
+    return std::visit([index](const auto &val) -> json
+                      {
+        using T = std::decay_t<decltype(val)>;
+        if constexpr (std::is_same_v<T, std::vector<json>>)
+        {
+            return val.at(index);
+        }
+        else
+        {
+            throw "json type is not array";
+        } },
+                      *__value);
+}
+json json::operator[](const std::string &key)
+{
+    return std::visit([key](const auto &val) -> json
+                      {
+        using T = std::decay_t<decltype(val)>;
+        if constexpr (std::is_same_v<T, std::unordered_map<std::string, json>>)
+        {
+            return val.at(key);
+        }
+        else
+        {
+            throw "json type is not object";
+        } },
+                      *__value);
+}
 
 json json::array(const std::initializer_list<json> &input_value)
 {
