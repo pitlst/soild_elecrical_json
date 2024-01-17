@@ -36,14 +36,14 @@ json::json(const std::unordered_map<std::string, json> &input_value)
     __value->emplace<std::unordered_map<std::string, json>>(input_value);
 }
 
-json json::operator=(const json &input_value)
+json &json::operator=(const json &input_value)
 {
     this->__value = input_value.__value;
     return *this;
 }
-json json::operator[](std::size_t index)
-{
-    return std::visit([index](const auto &val) -> json
+json &json::operator[](std::size_t index)
+{    
+    return std::visit([index](auto &val) -> json&
                       {
         using T = std::decay_t<decltype(val)>;
         if constexpr (std::is_same_v<T, std::vector<json>>)
@@ -56,9 +56,9 @@ json json::operator[](std::size_t index)
         } },
                       *__value);
 }
-json json::operator[](const std::string &key)
+json &json::operator[](const std::string &key)
 {
-    return std::visit([key](const auto &val) -> json
+    return std::visit([key](auto &val) -> json&
                       {
         using T = std::decay_t<decltype(val)>;
         if constexpr (std::is_same_v<T, std::unordered_map<std::string, json>>)
@@ -70,6 +70,26 @@ json json::operator[](const std::string &key)
             throw "json type is not object";
         } },
                       *__value);
+}
+json::operator bool() const
+{
+    return to_bool();
+}
+json::operator int() const
+{
+    return to_int();
+}
+json::operator float() const
+{
+    return float(to_double());
+}
+json::operator double() const
+{
+    return to_double();
+}
+json::operator std::string() const
+{
+    return to_str();
 }
 
 json json::array(const std::initializer_list<json> &input_value)
@@ -354,4 +374,9 @@ std::size_t json::size() const
         }   
         return temp_size; },
                       *__value);
+}
+
+json json::copy() const
+{
+    return *this;
 }

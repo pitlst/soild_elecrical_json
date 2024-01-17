@@ -20,9 +20,20 @@ namespace swq
         json(const std::unordered_map<std::string, json> &input_value);
         ~json() = default;
 
-        json operator=(const json &input_value);
-        json operator[](std::size_t index);
-        json operator[](const std::string &key);
+        /*
+        对于任何默认的或者为隐式的拷贝方式均为浅拷贝
+        所有针对json中的值的修改均会同步到所有指向对应变量的json类
+        对于深拷贝需要重新声明一个新的json变量或者使用下面定义的copy函数手动复制
+        */
+        json &operator=(const json &input_value);
+        json &operator[](std::size_t index);
+        json &operator[](const std::string &key);
+
+        operator bool() const;
+        operator int() const;
+        operator float() const;
+        operator double() const;
+        operator std::string() const;
 
         static json array(const std::initializer_list<json> &input_value);
         static json object(const std::unordered_map<std::string, json> &input_value);
@@ -45,6 +56,7 @@ namespace swq
         bool has(const std::string &key) const;
         bool empty() const;
         std::size_t size() const;
+        json copy() const;
 
     private:
         using m_value = std::variant<
