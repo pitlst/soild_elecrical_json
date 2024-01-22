@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 #include <initializer_list>
-#include <unordered_map>
+#include <map>
 #include <memory>
 
 namespace swq
@@ -17,7 +17,7 @@ namespace swq
         json(const json &input_value);
         json(std::string_view input_value);
         json(const std::vector<json> &input_value);
-        json(const std::unordered_map<std::string, json> &input_value);
+        json(const std::map<std::string, json> &input_value);
         ~json() = default;
 
         /*
@@ -36,7 +36,7 @@ namespace swq
         operator std::string() const;
 
         static json array(const std::initializer_list<json> &input_value);
-        static json object(const std::unordered_map<std::string, json> &input_value);
+        static json object(const std::map<std::string, json> &input_value);
 
         bool to_bool() const;
         int to_int() const;
@@ -51,12 +51,19 @@ namespace swq
         bool is_array() const;
         bool is_object() const;
         bool is_type(std::string_view input_type_name) const;
+        std::string get_type_name() const;
 
         bool has(int index) const;
         bool has(const std::string &key) const;
         bool empty() const;
         std::size_t size() const;
         json copy() const;
+        void copy(const json &input_value);
+        void append(const json &input_value);
+        void append(std::string_view input_name, const json &input_value);
+        void clear();
+        void remove(std::size_t index);
+        void remove(const std::string &key);
 
     private:
         using m_value = std::variant<
@@ -66,8 +73,12 @@ namespace swq
             double,
             std::string,
             std::vector<json>,
-            std::unordered_map<std::string, json>>;
-
-        std::shared_ptr<m_value> __value;
+            std::map<std::string, json>>;
+        /*
+            这里不能使用std::unordered_map
+            会引发不完整类型的错误
+            详见https://stackoverflow.com/questions/13089388/how-to-have-an-unordered-map-where-the-value-type-is-the-class-its-in
+        */
+        m_value __value;
     };
 }

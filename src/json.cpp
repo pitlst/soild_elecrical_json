@@ -1,6 +1,6 @@
 // 以下是对应函数的具体实现
 #include "json.hpp"
-
+#include <stdexcept>
 #include <typeinfo>
 #include <type_traits>
 
@@ -9,15 +9,15 @@ using namespace swq;
 json::json() {}
 json::json(bool input_value)
 {
-    __value->emplace<bool>(input_value);
+    __value.emplace<bool>(input_value);
 }
 json::json(int input_value)
 {
-    __value->emplace<int>(input_value);
+    __value.emplace<int>(input_value);
 }
 json::json(double input_value)
 {
-    __value->emplace<double>(input_value);
+    __value.emplace<double>(input_value);
 }
 json::json(const json &input_value)
 {
@@ -25,51 +25,50 @@ json::json(const json &input_value)
 }
 json::json(std::string_view input_value)
 {
-    __value->emplace<std::string>(input_value);
+    __value.emplace<std::string>(input_value);
 }
 json::json(const std::vector<json> &input_value)
 {
-    __value->emplace<std::vector<json>>(input_value);
+    __value.emplace<std::vector<json>>(input_value);
 }
-json::json(const std::unordered_map<std::string, json> &input_value)
+json::json(const std::map<std::string, json> &input_value)
 {
-    __value->emplace<std::unordered_map<std::string, json>>(input_value);
+    __value.emplace<std::map<std::string, json>>(input_value);
 }
 
 json &json::operator=(const json &input_value)
 {
-    this->__value = input_value.__value;
+    __value = input_value.__value;
     return *this;
 }
 json &json::operator[](std::size_t index)
-{    
-    return std::visit([index](auto &val) -> json&
+{
+    return std::visit([index](auto &val) -> json &
                       {
-        using T = std::decay_t<decltype(val)>;
-        if constexpr (std::is_same_v<T, std::vector<json>>)
+        if constexpr (std::is_same_v<std::decay_t<decltype(val)>, std::vector<json>>)
         {
             return val.at(index);
         }
         else
         {
-            throw "json type is not array";
+            throw std::logic_error("json type is not array");
         } },
-                      *__value);
+                      __value);
 }
 json &json::operator[](const std::string &key)
 {
-    return std::visit([key](auto &val) -> json&
+    return std::visit([key](auto &val) -> json &
                       {
         using T = std::decay_t<decltype(val)>;
-        if constexpr (std::is_same_v<T, std::unordered_map<std::string, json>>)
+        if constexpr (std::is_same_v<T, std::map<std::string, json>>)
         {
             return val.at(key);
         }
         else
         {
-            throw "json type is not object";
+            throw std::logic_error("json type is not object");
         } },
-                      *__value);
+                      __value);
 }
 json::operator bool() const
 {
@@ -97,7 +96,7 @@ json json::array(const std::initializer_list<json> &input_value)
     json temp(input_value);
     return temp;
 }
-json json::object(const std::unordered_map<std::string, json> &input_value)
+json json::object(const std::map<std::string, json> &input_value)
 {
     json temp(input_value);
     return temp;
@@ -118,7 +117,7 @@ bool json::to_bool() const
             temp_value = bool(val);
         }
         return temp_value; },
-                      *__value);
+                      __value);
 }
 int json::to_int() const
 {
@@ -139,7 +138,7 @@ int json::to_int() const
             temp_value = std::stoi(val);
         }
         return temp_value; },
-                      *__value);
+                      __value);
 }
 double json::to_double() const
 {
@@ -160,7 +159,7 @@ double json::to_double() const
             temp_value = std::stod(val);
         }
         return temp_value; },
-                      *__value);
+                      __value);
 }
 
 std::string json::to_str() const
@@ -203,7 +202,7 @@ std::string json::to_str() const
             }
             temp_value += "]";
         }
-        else if constexpr (std::is_same_v<T, std::unordered_map<std::string, json>>)
+        else if constexpr (std::is_same_v<T, std::map<std::string, json>>)
         {
             temp_value = "{";
             bool first = false;
@@ -213,13 +212,13 @@ std::string json::to_str() const
                 {
                     temp_value += ",";
                 }
-                temp_value += (ch.first + ":" + ch.second.to_str());
+                temp_value += ("\"" + ch.first + "\":" + ch.second.to_str());
                 first = true;
             }
             temp_value += "}";
         }
         return temp_value; },
-                      *__value);
+                      __value);
 }
 
 bool json::is_null() const
@@ -301,13 +300,50 @@ bool json::is_type(std::string_view input_type_name) const
         }
         else if(input_type_name == "object")
         {
-            if constexpr (std::is_same_v<T, std::unordered_map<std::string, json>>)
+            if constexpr (std::is_same_v<T, std::map<std::string, json>>)
             {
                 label = true;
             }
         }
         return label; },
-                      *__value);
+                      __value);
+}
+
+std::string json::get_type_name() const
+{
+    return std::visit([](const auto &val) -> std::string
+                      {
+        bool label = false;
+        using T = std::decay_t<decltype(val)>;
+        if constexpr (std::is_same_v<T, std::monostate>)
+        {
+            return "null";
+        }
+        else if constexpr (std::is_same_v<T, bool>)
+        {
+            return "bool";
+        }
+        else if constexpr (std::is_same_v<T, int>)
+        {
+            return "int";
+        }
+        else if constexpr (std::is_same_v<T, double>)
+        {
+            return "double";
+        }
+        else if constexpr (std::is_same_v<T, std::string>)
+        {
+            return "string";
+        }
+        else if constexpr (std::is_same_v<T, std::vector<json>>)
+        {
+            return "array";
+        }
+        else if constexpr (std::is_same_v<T, std::map<std::string, json>>)
+        {
+            return "object";
+        } },
+                      __value);
 }
 
 bool json::has(int index) const
@@ -324,7 +360,7 @@ bool json::has(int index) const
             }
         }   
         return label; },
-                      *__value);
+                      __value);
 }
 
 bool json::has(const std::string &key) const
@@ -333,7 +369,7 @@ bool json::has(const std::string &key) const
                       {
         bool label = false;
         using T = std::decay_t<decltype(val)>;
-        if constexpr(std::is_same_v<T, std::unordered_map<std::string, json>>)
+        if constexpr(std::is_same_v<T, std::map<std::string, json>>)
         {
             if(val.count(key))
             {
@@ -341,7 +377,7 @@ bool json::has(const std::string &key) const
             }
         }   
         return label; },
-                      *__value);
+                      __value);
 }
 
 bool json::empty() const
@@ -354,12 +390,12 @@ bool json::empty() const
         {
             label = true;
         }
-        else if constexpr(std::is_same_v<T, std::string> || std::is_same_v<T, std::vector<json>> || std::is_same_v<T, std::unordered_map<std::string, json>>)
+        else if constexpr(std::is_same_v<T, std::string> || std::is_same_v<T, std::vector<json>> || std::is_same_v<T, std::map<std::string, json>>)
         {
             label = val.empty();
         }   
         return label; },
-                      *__value);
+                      __value);
 }
 
 std::size_t json::size() const
@@ -368,15 +404,72 @@ std::size_t json::size() const
                       {
         std::size_t temp_size = 0;
         using T = std::decay_t<decltype(val)>;
-        if constexpr(std::is_same_v<T, std::string> || std::is_same_v<T, std::vector<json>> || std::is_same_v<T, std::unordered_map<std::string, json>>)
+        if constexpr(std::is_same_v<T, std::string> || std::is_same_v<T, std::vector<json>> || std::is_same_v<T, std::map<std::string, json>>)
         {
             temp_size = val.size();
         }   
         return temp_size; },
-                      *__value);
+                      __value);
 }
 
 json json::copy() const
 {
-    return *this;
+    return json(*this);
+}
+
+void json::copy(const json &input_value)
+{
+    this->__value = input_value.__value;
+}
+
+void json::append(const json &input_value)
+{
+    std::visit([input_value](auto &val)
+               {
+        if constexpr(std::is_same_v<std::decay_t<decltype(val)>, std::vector<json>>)
+        {
+            val.emplace_back(input_value);
+        } },
+               __value);
+}
+
+void json::append(std::string_view input_name, const json &input_value)
+{
+    std::visit([input_name, input_value](auto &val)
+               {
+        if constexpr(std::is_same_v<std::decay_t<decltype(val)>, std::map<std::string, json>>)
+        {
+            val.emplace(input_name, input_value);
+        } },
+               __value);
+}
+
+void json::clear()
+{
+}
+
+void json::remove(std::size_t index)
+{
+    std::visit([index](auto &val)
+               {
+        if constexpr(std::is_same_v<std::decay_t<decltype(val)>, std::vector<json>>)
+        {
+            val.erase(val.begin() + index);
+        } },
+               __value);
+}
+
+void json::remove(const std::string &key)
+{
+    std::visit([key](auto &val)
+               {
+        if constexpr(std::is_same_v<std::decay_t<decltype(val)>, std::map<std::string, json>>)
+        {
+            auto it = val.find(key);
+            if (it != val.end()) 
+            {
+                val.erase(it);
+            }
+        } },
+               __value);
 }
