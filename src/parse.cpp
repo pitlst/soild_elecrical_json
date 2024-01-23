@@ -1,5 +1,7 @@
 #include "parse.hpp"
 
+#include <stdexcept>
+
 using namespace swq;
 
 std::string swq::getLevelStr(int level)
@@ -80,6 +82,12 @@ std::string swq::format_json(const std::string json)
 //         return m_str[m_str.size() - 1];
 //     }
 // }
+
+// bool json_parse::in_range(int x, int lower, int upper)
+// {
+//     return (x >= lower && x <= upper);
+// }
+
 
 // json json_parse::parse()
 // {
@@ -267,7 +275,7 @@ std::string swq::format_json(const std::string json)
 
 // json json_parse::parse_object()
 // {
-//     json obj(json::json_object);
+//     json obj;
 //     char ch = get_next_token();
 //     if (ch == '}')
 //     {

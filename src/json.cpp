@@ -3,42 +3,58 @@
 #include <stdexcept>
 #include <typeinfo>
 #include <type_traits>
+#include <iostream>
 
 using namespace swq;
 
-json::json() {}
+json::json()
+{
+    __value = std::make_unique<m_value>();
+}
 json::json(bool input_value)
 {
-    __value.emplace<bool>(input_value);
+    __value = std::make_unique<m_value>();
+    __value->emplace<bool>(input_value);
 }
 json::json(int input_value)
 {
-    __value.emplace<int>(input_value);
+    __value = std::make_unique<m_value>();
+    __value->emplace<int>(input_value);
 }
 json::json(double input_value)
 {
-    __value.emplace<double>(input_value);
+    __value = std::make_unique<m_value>();
+    __value->emplace<double>(input_value);
 }
 json::json(const json &input_value)
 {
-    __value = input_value.__value;
+    __value = std::make_unique<m_value>();
+    *__value = *(input_value.__value);
+}
+json::json(const char *input_value)
+{
+    __value = std::make_unique<m_value>();
+    __value->emplace<std::string>(std::string_view(input_value));
 }
 json::json(std::string_view input_value)
 {
-    __value.emplace<std::string>(input_value);
+    __value = std::make_unique<m_value>();
+    __value->emplace<std::string>(input_value);
 }
 json::json(const std::vector<json> &input_value)
 {
-    __value.emplace<std::vector<json>>(input_value);
+    __value = std::make_unique<m_value>();
+    __value->emplace<std::vector<json>>(input_value);
 }
-json::json(const std::map<std::string, json> &input_value)
+json::json(const std::unordered_map<std::string, json> &input_value)
 {
-    __value.emplace<std::map<std::string, json>>(input_value);
+    __value = std::make_unique<m_value>();
+    __value->emplace<std::unordered_map<std::string, json>>(input_value);
 }
 
 json &json::operator=(const json &input_value)
 {
-    __value = input_value.__value;
+    *__value = *(input_value.__value);
     return *this;
 }
 json &json::operator[](std::size_t index)
@@ -53,14 +69,14 @@ json &json::operator[](std::size_t index)
         {
             throw std::logic_error("json type is not array");
         } },
-                      __value);
+                      *__value);
 }
 json &json::operator[](const std::string &key)
 {
     return std::visit([key](auto &val) -> json &
                       {
         using T = std::decay_t<decltype(val)>;
-        if constexpr (std::is_same_v<T, std::map<std::string, json>>)
+        if constexpr (std::is_same_v<T, std::unordered_map<std::string, json>>)
         {
             return val.at(key);
         }
@@ -68,8 +84,9 @@ json &json::operator[](const std::string &key)
         {
             throw std::logic_error("json type is not object");
         } },
-                      __value);
+                      *__value);
 }
+
 json::operator bool() const
 {
     return to_bool();
@@ -96,7 +113,7 @@ json json::array(const std::initializer_list<json> &input_value)
     json temp(input_value);
     return temp;
 }
-json json::object(const std::map<std::string, json> &input_value)
+json json::object(const std::unordered_map<std::string, json> &input_value)
 {
     json temp(input_value);
     return temp;
@@ -117,7 +134,7 @@ bool json::to_bool() const
             temp_value = bool(val);
         }
         return temp_value; },
-                      __value);
+                      *__value);
 }
 int json::to_int() const
 {
@@ -138,7 +155,7 @@ int json::to_int() const
             temp_value = std::stoi(val);
         }
         return temp_value; },
-                      __value);
+                      *__value);
 }
 double json::to_double() const
 {
@@ -159,7 +176,7 @@ double json::to_double() const
             temp_value = std::stod(val);
         }
         return temp_value; },
-                      __value);
+                      *__value);
 }
 
 std::string json::to_str() const
@@ -187,6 +204,10 @@ std::string json::to_str() const
         {
             temp_value = std::to_string(val);
         }
+        else if constexpr (std::is_same_v<T, std::string>)
+        {
+            temp_value = ("\"" + val + "\"");
+        }
         else if constexpr (std::is_same_v<T, std::vector<json>>)
         {
             temp_value = "[";
@@ -202,7 +223,7 @@ std::string json::to_str() const
             }
             temp_value += "]";
         }
-        else if constexpr (std::is_same_v<T, std::map<std::string, json>>)
+        else if constexpr (std::is_same_v<T, std::unordered_map<std::string, json>>)
         {
             temp_value = "{";
             bool first = false;
@@ -218,7 +239,7 @@ std::string json::to_str() const
             temp_value += "}";
         }
         return temp_value; },
-                      __value);
+                      *__value);
 }
 
 bool json::is_null() const
@@ -300,13 +321,13 @@ bool json::is_type(std::string_view input_type_name) const
         }
         else if(input_type_name == "object")
         {
-            if constexpr (std::is_same_v<T, std::map<std::string, json>>)
+            if constexpr (std::is_same_v<T, std::unordered_map<std::string, json>>)
             {
                 label = true;
             }
         }
         return label; },
-                      __value);
+                      *__value);
 }
 
 std::string json::get_type_name() const
@@ -339,11 +360,57 @@ std::string json::get_type_name() const
         {
             return "array";
         }
-        else if constexpr (std::is_same_v<T, std::map<std::string, json>>)
+        else if constexpr (std::is_same_v<T, std::unordered_map<std::string, json>>)
         {
             return "object";
         } },
-                      __value);
+                      *__value);
+}
+
+
+// 注意，使用该函数时会重置对应类型的数据
+void json::set_type(std::string_view input_type_name)
+{
+    if (input_type_name == "null" && !is_null())
+    {
+        clear();
+        __value.release();
+        __value = std::make_unique<m_value>();
+    }
+    else if (input_type_name == "bool" && !is_bool())
+    {
+        clear();
+        __value.reset(new m_value(false));
+    }
+    else if (input_type_name == "int" && !is_int())
+    {
+        clear();
+        __value.reset(new m_value(0));
+    }
+    else if ((input_type_name == "double" || input_type_name == "float")&& !is_double())
+    {
+        clear();
+        __value.reset(new m_value(0.0));
+    }
+    else if (input_type_name == "string" && !is_string())
+    {
+        clear();
+        __value.reset(new m_value(""));
+    }
+    else if (input_type_name == "array" && !is_array())
+    {
+        clear();
+        std::vector<json> temp;
+        __value.release();
+        __value = std::make_unique<m_value>(temp);
+    }
+    else if (input_type_name == "object" && !is_object())
+    {
+        clear();
+        std::unordered_map<std::string, json> temp;
+        __value.release();
+        __value = std::make_unique<m_value>(temp);
+    }
 }
 
 bool json::has(int index) const
@@ -360,7 +427,7 @@ bool json::has(int index) const
             }
         }   
         return label; },
-                      __value);
+                      *__value);
 }
 
 bool json::has(const std::string &key) const
@@ -369,7 +436,7 @@ bool json::has(const std::string &key) const
                       {
         bool label = false;
         using T = std::decay_t<decltype(val)>;
-        if constexpr(std::is_same_v<T, std::map<std::string, json>>)
+        if constexpr(std::is_same_v<T, std::unordered_map<std::string, json>>)
         {
             if(val.count(key))
             {
@@ -377,7 +444,7 @@ bool json::has(const std::string &key) const
             }
         }   
         return label; },
-                      __value);
+                      *__value);
 }
 
 bool json::empty() const
@@ -390,12 +457,12 @@ bool json::empty() const
         {
             label = true;
         }
-        else if constexpr(std::is_same_v<T, std::string> || std::is_same_v<T, std::vector<json>> || std::is_same_v<T, std::map<std::string, json>>)
+        else if constexpr(std::is_same_v<T, std::string> || std::is_same_v<T, std::vector<json>> || std::is_same_v<T, std::unordered_map<std::string, json>>)
         {
             label = val.empty();
         }   
         return label; },
-                      __value);
+                      *__value);
 }
 
 std::size_t json::size() const
@@ -404,12 +471,12 @@ std::size_t json::size() const
                       {
         std::size_t temp_size = 0;
         using T = std::decay_t<decltype(val)>;
-        if constexpr(std::is_same_v<T, std::string> || std::is_same_v<T, std::vector<json>> || std::is_same_v<T, std::map<std::string, json>>)
+        if constexpr(std::is_same_v<T, std::string> || std::is_same_v<T, std::vector<json>> || std::is_same_v<T, std::unordered_map<std::string, json>>)
         {
             temp_size = val.size();
         }   
         return temp_size; },
-                      __value);
+                      *__value);
 }
 
 json json::copy() const
@@ -419,7 +486,7 @@ json json::copy() const
 
 void json::copy(const json &input_value)
 {
-    this->__value = input_value.__value;
+    *(this->__value) = *(input_value.__value);
 }
 
 void json::append(const json &input_value)
@@ -430,22 +497,42 @@ void json::append(const json &input_value)
         {
             val.emplace_back(input_value);
         } },
-               __value);
+               *__value);
 }
 
 void json::append(std::string_view input_name, const json &input_value)
 {
     std::visit([input_name, input_value](auto &val)
                {
-        if constexpr(std::is_same_v<std::decay_t<decltype(val)>, std::map<std::string, json>>)
+        if constexpr(std::is_same_v<std::decay_t<decltype(val)>, std::unordered_map<std::string, json>>)
         {
             val.emplace(input_name, input_value);
         } },
-               __value);
+               *__value);
 }
 
 void json::clear()
 {
+    std::visit([](auto &val)
+               {
+        using T = std::decay_t<decltype(val)>;
+        if constexpr(std::is_same_v<T, std::vector<json>>)
+        {
+            for (auto & ch : val)
+            {
+                ch.clear();
+            }
+        }    
+        else if constexpr(std::is_same_v<T, std::unordered_map<std::string, json>>)
+        { 
+            for (auto & ch : val)
+            {
+                ch.second.clear();
+            }
+        } },
+               *__value);
+    __value.release();
+    __value = std::make_unique<m_value>();
 }
 
 void json::remove(std::size_t index)
@@ -456,14 +543,14 @@ void json::remove(std::size_t index)
         {
             val.erase(val.begin() + index);
         } },
-               __value);
+               *__value);
 }
 
 void json::remove(const std::string &key)
 {
     std::visit([key](auto &val)
                {
-        if constexpr(std::is_same_v<std::decay_t<decltype(val)>, std::map<std::string, json>>)
+        if constexpr(std::is_same_v<std::decay_t<decltype(val)>, std::unordered_map<std::string, json>>)
         {
             auto it = val.find(key);
             if (it != val.end()) 
@@ -471,5 +558,5 @@ void json::remove(const std::string &key)
                 val.erase(it);
             }
         } },
-               __value);
+               *__value);
 }

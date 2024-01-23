@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 #include <initializer_list>
-#include <map>
+#include <unordered_map>
 #include <memory>
 
 namespace swq
@@ -15,9 +15,10 @@ namespace swq
         json(int input_value);
         json(double input_value);
         json(const json &input_value);
+        json(const char * input_value);
         json(std::string_view input_value);
         json(const std::vector<json> &input_value);
-        json(const std::map<std::string, json> &input_value);
+        json(const std::unordered_map<std::string, json> &input_value);
         ~json() = default;
 
         /*
@@ -36,7 +37,7 @@ namespace swq
         operator std::string() const;
 
         static json array(const std::initializer_list<json> &input_value);
-        static json object(const std::map<std::string, json> &input_value);
+        static json object(const std::unordered_map<std::string, json> &input_value);
 
         bool to_bool() const;
         int to_int() const;
@@ -52,6 +53,7 @@ namespace swq
         bool is_object() const;
         bool is_type(std::string_view input_type_name) const;
         std::string get_type_name() const;
+        void set_type(std::string_view input_type_name);
 
         bool has(int index) const;
         bool has(const std::string &key) const;
@@ -73,12 +75,13 @@ namespace swq
             double,
             std::string,
             std::vector<json>,
-            std::map<std::string, json>>;
+            std::unordered_map<std::string, json>>;
         /*
-            这里不能使用std::unordered_map
+            这里不能直接使用std::unordered_map
             会引发不完整类型的错误
+            因为指针允许不完整类型的包含，所以使用指针包含所使用的数据
             详见https://stackoverflow.com/questions/13089388/how-to-have-an-unordered-map-where-the-value-type-is-the-class-its-in
         */
-        m_value __value;
+        std::unique_ptr<m_value> __value;
     };
 }
